@@ -105,8 +105,13 @@ export interface MigrationState {
 export interface _CaffeineStorageRefillInformation {
     proposed_top_up_amount?: bigint;
 }
+export interface IncomeBreakdown {
+    cash: bigint;
+    card: bigint;
+}
 export interface MonthlyStats {
     expensesByCategory: ExpenseBreakdown;
+    incomeByCategory: IncomeBreakdown;
     totalIncome: bigint;
     totalExpenses: bigint;
     netProfit: bigint;

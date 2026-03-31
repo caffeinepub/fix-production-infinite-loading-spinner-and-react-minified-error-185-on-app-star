@@ -129,7 +129,7 @@ export default function DashboardPage() {
                     <span className="font-medium">Cash</span>
                     <span className="text-success font-semibold">
                       {formatMinorUnitsToCurrency(
-                        (stats as any)?.incomeByCategory?.cash || BigInt(0),
+                        stats?.incomeByCategory?.cash || BigInt(0),
                       )}
                     </span>
                   </div>
@@ -137,7 +137,7 @@ export default function DashboardPage() {
                     <span className="font-medium">Card</span>
                     <span className="text-success font-semibold">
                       {formatMinorUnitsToCurrency(
-                        (stats as any)?.incomeByCategory?.card || BigInt(0),
+                        stats?.incomeByCategory?.card || BigInt(0),
                       )}
                     </span>
                   </div>

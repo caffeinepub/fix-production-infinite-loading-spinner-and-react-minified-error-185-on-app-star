@@ -16,8 +16,13 @@ export interface MigrationState {
     legacyCutoffId: bigint;
     legacyScalingApplied: boolean;
 }
+export interface IncomeBreakdown {
+    cash: bigint;
+    card: bigint;
+}
 export interface MonthlyStats {
     expensesByCategory: ExpenseBreakdown;
+    incomeByCategory: IncomeBreakdown;
     totalIncome: bigint;
     totalExpenses: bigint;
     netProfit: bigint;
