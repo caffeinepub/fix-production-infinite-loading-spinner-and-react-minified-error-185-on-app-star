@@ -134,6 +134,14 @@ export default function DashboardPage() {
                     </span>
                   </div>
                   <div className="flex justify-between items-center pb-2 border-b">
+                    <span className="font-medium">Cash 2</span>
+                    <span className="text-success font-semibold">
+                      {formatMinorUnitsToCurrency(
+                        stats?.incomeByCategory?.cash2 || BigInt(0),
+                      )}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center pb-2 border-b">
                     <span className="font-medium">Card</span>
                     <span className="text-success font-semibold">
                       {formatMinorUnitsToCurrency(

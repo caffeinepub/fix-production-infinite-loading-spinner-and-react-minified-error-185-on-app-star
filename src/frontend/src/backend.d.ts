@@ -18,6 +18,7 @@ export interface MigrationState {
 }
 export interface IncomeBreakdown {
     cash: bigint;
+    cash2: bigint;
     card: bigint;
 }
 export interface MonthlyStats {
@@ -56,6 +57,7 @@ export enum Category {
     other = "other",
     card = "card",
     cash = "cash",
+    cash2 = "cash2",
     food = "food",
     rent = "rent",
     utilities = "utilities",

@@ -107,6 +107,7 @@ export interface _CaffeineStorageRefillInformation {
 }
 export interface IncomeBreakdown {
     cash: bigint;
+    cash2: bigint;
     card: bigint;
 }
 export interface MonthlyStats {
@@ -149,6 +150,7 @@ export enum Category {
     other = "other",
     card = "card",
     cash = "cash",
+    cash2 = "cash2",
     food = "food",
     rent = "rent",
     utilities = "utilities",
@@ -575,6 +577,8 @@ function from_candid_variant_n16(_uploadFile: (file: ExternalBlob) => Promise<Ui
 } | {
     cash: null;
 } | {
+    cash2: null;
+} | {
     food: null;
 } | {
     rent: null;
@@ -585,7 +589,7 @@ function from_candid_variant_n16(_uploadFile: (file: ExternalBlob) => Promise<Ui
 } | {
     drinks: null;
 }): Category {
-    return "other" in value ? Category.other : "card" in value ? Category.card : "cash" in value ? Category.cash : "food" in value ? Category.food : "rent" in value ? Category.rent : "utilities" in value ? Category.utilities : "wages" in value ? Category.wages : "drinks" in value ? Category.drinks : value;
+    return "other" in value ? Category.other : "card" in value ? Category.card : "cash" in value ? Category.cash : "cash2" in value ? Category.cash2 : "food" in value ? Category.food : "rent" in value ? Category.rent : "utilities" in value ? Category.utilities : "wages" in value ? Category.wages : "drinks" in value ? Category.drinks : value;
 }
 function from_candid_variant_n19(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     admin: null;
@@ -642,6 +646,8 @@ function to_candid_variant_n9(_uploadFile: (file: ExternalBlob) => Promise<Uint8
 } | {
     cash: null;
 } | {
+    cash2: null;
+} | {
     food: null;
 } | {
     rent: null;
@@ -658,6 +664,8 @@ function to_candid_variant_n9(_uploadFile: (file: ExternalBlob) => Promise<Uint8
         card: null
     } : value == Category.cash ? {
         cash: null
+    } : value == Category.cash2 ? {
+        cash2: null
     } : value == Category.food ? {
         food: null
     } : value == Category.rent ? {

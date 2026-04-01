@@ -23,6 +23,7 @@ export const Category = IDL.Variant({
   'other' : IDL.Null,
   'card' : IDL.Null,
   'cash' : IDL.Null,
+  'cash2' : IDL.Null,
   'food' : IDL.Null,
   'rent' : IDL.Null,
   'utilities' : IDL.Null,
@@ -59,8 +60,14 @@ export const ExpenseBreakdown = IDL.Record({
   'wages' : IDL.Int,
   'drinks' : IDL.Int,
 });
+export const IncomeBreakdown = IDL.Record({
+  'cash' : IDL.Int,
+  'cash2' : IDL.Int,
+  'card' : IDL.Int,
+});
 export const MonthlyStats = IDL.Record({
   'expensesByCategory' : ExpenseBreakdown,
+  'incomeByCategory' : IncomeBreakdown,
   'totalIncome' : IDL.Int,
   'totalExpenses' : IDL.Int,
   'netProfit' : IDL.Int,
@@ -155,6 +162,7 @@ export const idlFactory = ({ IDL }) => {
     'other' : IDL.Null,
     'card' : IDL.Null,
     'cash' : IDL.Null,
+    'cash2' : IDL.Null,
     'food' : IDL.Null,
     'rent' : IDL.Null,
     'utilities' : IDL.Null,
@@ -191,8 +199,14 @@ export const idlFactory = ({ IDL }) => {
     'wages' : IDL.Int,
     'drinks' : IDL.Int,
   });
+  const IncomeBreakdown = IDL.Record({
+    'cash' : IDL.Int,
+    'cash2' : IDL.Int,
+    'card' : IDL.Int,
+  });
   const MonthlyStats = IDL.Record({
     'expensesByCategory' : ExpenseBreakdown,
+    'incomeByCategory' : IncomeBreakdown,
     'totalIncome' : IDL.Int,
     'totalExpenses' : IDL.Int,
     'netProfit' : IDL.Int,

@@ -18,6 +18,7 @@ export interface AdminAuthStatus {
 export type Category = { 'other' : null } |
   { 'card' : null } |
   { 'cash' : null } |
+  { 'cash2' : null } |
   { 'food' : null } |
   { 'rent' : null } |
   { 'utilities' : null } |
@@ -36,12 +37,18 @@ export interface ExpenseBreakdown {
   'wages' : bigint,
   'drinks' : bigint,
 }
+export interface IncomeBreakdown {
+  'cash' : bigint,
+  'cash2' : bigint,
+  'card' : bigint,
+}
 export interface MigrationState {
   'legacyCutoffId' : bigint,
   'legacyScalingApplied' : boolean,
 }
 export interface MonthlyStats {
   'expensesByCategory' : ExpenseBreakdown,
+  'incomeByCategory' : IncomeBreakdown,
   'totalIncome' : bigint,
   'totalExpenses' : bigint,
   'netProfit' : bigint,

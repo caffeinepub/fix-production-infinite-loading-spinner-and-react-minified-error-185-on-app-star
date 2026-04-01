@@ -91,6 +91,7 @@ export default function ReportsPage() {
     };
     const incomeByCategory = {
       cash: BigInt(0),
+      cash2: BigInt(0),
       card: BigInt(0),
     };
 
@@ -99,6 +100,10 @@ export default function ReportsPage() {
         case Category.cash:
           totalIncome += t.amount;
           incomeByCategory.cash += t.amount;
+          break;
+        case Category.cash2:
+          totalIncome += t.amount;
+          incomeByCategory.cash2 += t.amount;
           break;
         case Category.card:
           totalIncome += t.amount;
@@ -541,6 +546,14 @@ export default function ReportsPage() {
                     </span>
                   </div>
                   <div className="flex justify-between items-center p-3 border rounded-lg">
+                    <span className="text-sm font-medium">Cash 2</span>
+                    <span className="text-sm font-semibold text-success">
+                      {formatMinorUnitsToCurrency(
+                        monthlyStats.incomeByCategory.cash2,
+                      )}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center p-3 border rounded-lg">
                     <span className="text-sm font-medium">Card</span>
                     <span className="text-sm font-semibold text-success">
                       {formatMinorUnitsToCurrency(
@@ -694,6 +707,14 @@ export default function ReportsPage() {
                     <span className="text-sm font-semibold text-success">
                       {formatMinorUnitsToCurrency(
                         yearlyStats.incomeByCategory.cash,
+                      )}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center p-3 border rounded-lg">
+                    <span className="text-sm font-medium">Cash 2</span>
+                    <span className="text-sm font-semibold text-success">
+                      {formatMinorUnitsToCurrency(
+                        yearlyStats.incomeByCategory.cash2,
                       )}
                     </span>
                   </div>

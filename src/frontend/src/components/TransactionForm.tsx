@@ -153,6 +153,7 @@ export default function TransactionForm({
 
   const revenueCategories = [
     { value: categoryToString(Category.cash), label: "Cash" },
+    { value: categoryToString(Category.cash2), label: "Cash 2" },
     { value: categoryToString(Category.card), label: "Card" },
   ];
 

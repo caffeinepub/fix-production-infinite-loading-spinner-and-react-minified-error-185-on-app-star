@@ -1,7 +1,7 @@
 import { Category } from "../backend";
 
 // Revenue categories
-const REVENUE_CATEGORIES = [Category.cash, Category.card];
+const REVENUE_CATEGORIES = [Category.cash, Category.cash2, Category.card];
 
 // Expense categories
 const EXPENSE_CATEGORIES = [

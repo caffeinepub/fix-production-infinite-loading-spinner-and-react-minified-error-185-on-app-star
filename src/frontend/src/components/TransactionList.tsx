@@ -35,6 +35,7 @@ interface TransactionListProps {
 
 const categoryLabels: Record<Category, string> = {
   [Category.cash]: "Cash",
+  [Category.cash2]: "Cash 2",
   [Category.card]: "Card",
   [Category.food]: "Food",
   [Category.drinks]: "Drinks",
@@ -46,6 +47,7 @@ const categoryLabels: Record<Category, string> = {
 
 const categoryColors: Record<Category, string> = {
   [Category.cash]: "bg-success/10 text-success border-success/20",
+  [Category.cash2]: "bg-success/10 text-success border-success/20",
   [Category.card]: "bg-success/10 text-success border-success/20",
   [Category.food]: "bg-warning/10 text-warning border-warning/20",
   [Category.drinks]: "bg-chart-2/10 text-chart-2 border-chart-2/20",

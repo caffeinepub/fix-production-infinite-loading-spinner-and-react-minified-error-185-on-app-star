@@ -26,8 +26,30 @@ actor {
     category : Category;
   };
 
+  // V1 types kept for stable migration (before cash2 was added)
+  public type CategoryV1 = {
+    #cash;
+    #card;
+    #food;
+    #drinks;
+    #wages;
+    #rent;
+    #utilities;
+    #other;
+  };
+
+  public type TransactionV1 = {
+    id : Nat;
+    owner : Principal;
+    amount : Int;
+    description : Text;
+    date : Text;
+    category : CategoryV1;
+  };
+
   public type Category = {
     #cash;
+    #cash2;
     #card;
     #food;
     #drinks;
@@ -48,6 +70,7 @@ actor {
 
   public type IncomeBreakdown = {
     cash : Int;
+    cash2 : Int;
     card : Int;
   };
 
@@ -81,7 +104,11 @@ actor {
   var adminBootstrapSecret : Text = "CHANGE_ME_ON_FIRST_DEPLOY";
   var nextTransactionId = 0;
 
-  let transactions = Map.empty<Nat, Transaction>();
+  // V1: receives old stable data from pre-cash2 deployments
+  let transactions = Map.empty<Nat, TransactionV1>();
+  // V2: holds migrated + new transactions with updated Category type
+  let transactionsV2 = Map.empty<Nat, Transaction>();
+  var cash2MigrationDone : Bool = false;
   let userProfiles = Map.empty<Principal, UserProfile>();
 
   type MigrationState = {
@@ -122,7 +149,7 @@ actor {
       Runtime.trap("Unauthorized: Only admin can access diagnostics");
     };
     {
-      totalTransactions = transactions.size();
+      totalTransactions = transactionsV2.size();
       totalUserProfiles = userProfiles.size();
       nextTransactionId;
     };
@@ -177,7 +204,7 @@ actor {
       date;
       category;
     };
-    transactions.add(id, transaction);
+    transactionsV2.add(id, transaction);
     nextTransactionId += 1;
     id;
   };
@@ -186,7 +213,7 @@ actor {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only users can edit transactions");
     };
-    switch (transactions.get(id)) {
+    switch (transactionsV2.get(id)) {
       case (null) {
         Runtime.trap("Transaction not found");
       };
@@ -202,7 +229,7 @@ actor {
           date;
           category;
         };
-        transactions.add(id, updatedTransaction);
+        transactionsV2.add(id, updatedTransaction);
       };
     };
   };
@@ -211,7 +238,7 @@ actor {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only users can delete transactions");
     };
-    switch (transactions.get(id)) {
+    switch (transactionsV2.get(id)) {
       case (null) {
         Runtime.trap("Transaction not found");
       };
@@ -219,7 +246,7 @@ actor {
         if (existingTransaction.owner != caller) {
           Runtime.trap("Unauthorized: Can only delete your own transactions");
         };
-        transactions.remove(id);
+        transactionsV2.remove(id);
       };
     };
   };
@@ -228,7 +255,7 @@ actor {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only users can view transactions");
     };
-    transactions.values().toArray().filter(
+    transactionsV2.values().toArray().filter(
       func(transaction) {
         transaction.owner == caller;
       }
@@ -239,7 +266,7 @@ actor {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only users can view transactions");
     };
-    transactions.values().toArray().filter(
+    transactionsV2.values().toArray().filter(
       func(transaction) {
         transaction.owner == caller and transaction.category == category;
       }
@@ -260,6 +287,7 @@ actor {
     var totalExpenses : Int = 0;
 
     var cashTotal : Int = 0;
+    var cash2Total : Int = 0;
     var cardTotal : Int = 0;
 
     var foodTotal : Int = 0;
@@ -269,7 +297,7 @@ actor {
     var utilitiesTotal : Int = 0;
     var otherTotal : Int = 0;
 
-    for (transaction in transactions.values()) {
+    for (transaction in transactionsV2.values()) {
       if (transaction.owner == caller) {
         switch (parseISO8601YearMonth(transaction.date)) {
           case (?{ year; month }) {
@@ -278,6 +306,10 @@ actor {
                 case (#cash) {
                   totalIncome += transaction.amount;
                   cashTotal += transaction.amount;
+                };
+                case (#cash2) {
+                  totalIncome += transaction.amount;
+                  cash2Total += transaction.amount;
                 };
                 case (#card) {
                   totalIncome += transaction.amount;
@@ -326,6 +358,7 @@ actor {
 
     let incomeBreakdown : IncomeBreakdown = {
       cash = cashTotal;
+      cash2 = cash2Total;
       card = cardTotal;
     };
 
@@ -433,4 +466,37 @@ actor {
       case (null) { null };
     };
   };
+  // Migrate CategoryV1 to Category (adds #cash2 support)
+  func migrateCategoryV1(c : CategoryV1) : Category {
+    switch (c) {
+      case (#cash) { #cash };
+      case (#card) { #card };
+      case (#food) { #food };
+      case (#drinks) { #drinks };
+      case (#wages) { #wages };
+      case (#rent) { #rent };
+      case (#utilities) { #utilities };
+      case (#other) { #other };
+    };
+  };
+
+  // Run once after upgrade: copy old transactions into transactionsV2 with new Category type
+  system func postupgrade() {
+    if (not cash2MigrationDone) {
+      for ((id, txn) in transactions.entries()) {
+        let newTxn : Transaction = {
+          id = txn.id;
+          owner = txn.owner;
+          amount = txn.amount;
+          description = txn.description;
+          date = txn.date;
+          category = migrateCategoryV1(txn.category);
+        };
+        transactionsV2.add(id, newTxn);
+      };
+      cash2MigrationDone := true;
+    };
+  };
+
+
 };
