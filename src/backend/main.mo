@@ -107,7 +107,8 @@ actor {
   // Stable list of admin principal IDs - survives upgrades
   stable var stableAdminPrincipals : [Text] = [
     "rdlj6-rebbt-ad75m-qcmq7-qq75x-l4tog-5wuyv-y6rue-2odpd-jq3p2-vqe",
-    "7o2m3-rakry-p4h5r-idoqq-q6rih-us25s-e3h2m-yxaeh-2qze4-yi7uu-qae"
+    "7o2m3-rakry-p4h5r-idoqq-q6rih-us25s-e3h2m-yxaeh-2qze4-yi7uu-qae",
+    "uzpft-fg6ir-2irxw-77zb4-3yeld-inrtb-oefu6-svriz-h4t7n-jrdqy-jqe"
   ];
 
   // Helper: check if a principal is in the hardcoded stable admin list
