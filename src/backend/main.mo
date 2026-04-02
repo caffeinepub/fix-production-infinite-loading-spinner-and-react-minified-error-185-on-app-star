@@ -26,7 +26,6 @@ actor {
     category : Category;
   };
 
-  // V1 types kept for stable migration (before cash2 was added)
   public type CategoryV1 = {
     #cash;
     #card;
@@ -104,14 +103,16 @@ actor {
   var adminBootstrapSecret : Text = "CHANGE_ME_ON_FIRST_DEPLOY";
   var nextTransactionId = 0;
 
-  // Stable list of admin principal IDs - survives upgrades
-  stable var stableAdminPrincipals : [Text] = [
+  // REQUIRED_ADMINS: canonical list. Applied on every upgrade via postupgrade().
+  let REQUIRED_ADMINS : [Text] = [
     "rdlj6-rebbt-ad75m-qcmq7-qq75x-l4tog-5wuyv-y6rue-2odpd-jq3p2-vqe",
     "7o2m3-rakry-p4h5r-idoqq-q6rih-us25s-e3h2m-yxaeh-2qze4-yi7uu-qae",
     "uzpft-fg6ir-2irxw-77zb4-3yeld-inrtb-oefu6-svriz-h4t7n-jrdqy-jqe"
   ];
 
-  // Helper: check if a principal is in the hardcoded stable admin list
+  // Stable list - explicitly overwritten in postupgrade() to apply any additions
+  stable var stableAdminPrincipals : [Text] = REQUIRED_ADMINS;
+
   func isStableAdmin(caller : Principal) : Bool {
     let callerText = caller.toText();
     for (p in stableAdminPrincipals.values()) {
@@ -120,12 +121,11 @@ actor {
     false;
   };
 
-  // Seed access control state from stable admin list
   func seedAdminsFromStable() {
     for (p in stableAdminPrincipals.values()) {
       let principal = Principal.fromText(p);
       switch (accessControlState.userRoles.get(principal)) {
-        case (?#admin) {}; // already admin
+        case (?#admin) {};
         case (_) {
           accessControlState.userRoles.add(principal, #admin);
           accessControlState.adminAssigned := true;
@@ -134,9 +134,7 @@ actor {
     };
   };
 
-  // V1: receives old stable data from pre-cash2 deployments
   let transactions = Map.empty<Nat, TransactionV1>();
-  // V2: holds migrated + new transactions with updated Category type
   let transactionsV2 = Map.empty<Nat, Transaction>();
   var cash2MigrationDone : Bool = false;
   let userProfiles = Map.empty<Principal, UserProfile>();
@@ -154,7 +152,6 @@ actor {
   include MixinAuthorization(accessControlState);
   include MixinStorage();
 
-  // GET CALLER PRINCIPAL AS TEXT
   public query ({ caller }) func getCallerPrincipalAsText() : async Text {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user)) and not isStableAdmin(caller)) {
       Runtime.trap("Unauthorized: Only users can access principal information");
@@ -171,7 +168,6 @@ actor {
     };
   };
 
-  // Diagnostics API (Aggregate Metadata Only)
   public query ({ caller }) func getDiagnosticsStats() : async DiagnosticsStats {
     if (not AccessControl.isAdmin(accessControlState, caller) and not isStableAdmin(caller)) {
       Runtime.trap("Unauthorized: Only admin can access diagnostics");
@@ -196,7 +192,6 @@ actor {
     };
   };
 
-  // User profile management
   public query ({ caller }) func getCallerUserProfile() : async ?UserProfile {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user)) and not isStableAdmin(caller)) {
       Runtime.trap("Unauthorized: Only users can view profiles");
@@ -218,7 +213,6 @@ actor {
     userProfiles.add(caller, profile);
   };
 
-  // Transaction CRUD
   public shared ({ caller }) func addTransaction(amount : Int, description : Text, date : Text, category : Category) : async Nat {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user)) and not isStableAdmin(caller)) {
       Runtime.trap("Unauthorized: Only users can add transactions");
@@ -301,7 +295,6 @@ actor {
     );
   };
 
-  // Statistics
   public query ({ caller }) func getCurrentMonthStats() : async MonthlyStats {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user)) and not isStableAdmin(caller)) {
       Runtime.trap("Unauthorized: Only users can view statistics");
@@ -495,7 +488,6 @@ actor {
     };
   };
 
-  // Migrate CategoryV1 to Category (adds #cash2 support)
   func migrateCategoryV1(c : CategoryV1) : Category {
     switch (c) {
       case (#cash) { #cash };
@@ -509,10 +501,11 @@ actor {
     };
   };
 
-  // Run once after upgrade: copy old transactions into transactionsV2 with new Category type
-  // Also re-seed admin principals from stable list (accessControlState is NOT stable)
+  // CRITICAL FIX: Explicitly overwrite stableAdminPrincipals with REQUIRED_ADMINS
+  // on every upgrade. This ensures new principals always take effect even if
+  // stable memory had an older version of the list from a previous deploy.
   system func postupgrade() {
-    // Always re-seed admins from stable list on every upgrade
+    stableAdminPrincipals := REQUIRED_ADMINS;
     seedAdminsFromStable();
 
     if (not cash2MigrationDone) {
