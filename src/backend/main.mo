@@ -100,9 +100,38 @@ actor {
   };
 
   let accessControlState = AccessControl.initState();
-  var adminClaimed : Bool = true; // Never ever set to false in migration! Wrongly set is never again fixable at runtime in the prod/live canister!
+  var adminClaimed : Bool = true;
   var adminBootstrapSecret : Text = "CHANGE_ME_ON_FIRST_DEPLOY";
   var nextTransactionId = 0;
+
+  // Stable list of admin principal IDs - survives upgrades
+  stable var stableAdminPrincipals : [Text] = [
+    "rdlj6-rebbt-ad75m-qcmq7-qq75x-l4tog-5wuyv-y6rue-2odpd-jq3p2-vqe",
+    "7o2m3-rakry-p4h5r-idoqq-q6rih-us25s-e3h2m-yxaeh-2qze4-yi7uu-qae"
+  ];
+
+  // Helper: check if a principal is in the hardcoded stable admin list
+  func isStableAdmin(caller : Principal) : Bool {
+    let callerText = caller.toText();
+    for (p in stableAdminPrincipals.values()) {
+      if (p == callerText) { return true };
+    };
+    false;
+  };
+
+  // Seed access control state from stable admin list
+  func seedAdminsFromStable() {
+    for (p in stableAdminPrincipals.values()) {
+      let principal = Principal.fromText(p);
+      switch (accessControlState.userRoles.get(principal)) {
+        case (?#admin) {}; // already admin
+        case (_) {
+          accessControlState.userRoles.add(principal, #admin);
+          accessControlState.adminAssigned := true;
+        };
+      };
+    };
+  };
 
   // V1: receives old stable data from pre-cash2 deployments
   let transactions = Map.empty<Nat, TransactionV1>();
@@ -126,18 +155,16 @@ actor {
 
   // GET CALLER PRINCIPAL AS TEXT
   public query ({ caller }) func getCallerPrincipalAsText() : async Text {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user)) and not isStableAdmin(caller)) {
       Runtime.trap("Unauthorized: Only users can access principal information");
     };
     caller.toText();
   };
 
   public query ({ caller }) func getAdminAuthStatus() : async AdminAuthStatus {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can access authentication status");
-    };
+    let adminStatus = AccessControl.isAdmin(accessControlState, caller) or isStableAdmin(caller);
     {
-      isAuthenticated = AccessControl.isAdmin(accessControlState, caller);
+      isAuthenticated = adminStatus;
       principal = caller;
       principalText = caller.toText();
     };
@@ -145,7 +172,7 @@ actor {
 
   // Diagnostics API (Aggregate Metadata Only)
   public query ({ caller }) func getDiagnosticsStats() : async DiagnosticsStats {
-    if (not AccessControl.isAdmin(accessControlState, caller)) {
+    if (not AccessControl.isAdmin(accessControlState, caller) and not isStableAdmin(caller)) {
       Runtime.trap("Unauthorized: Only admin can access diagnostics");
     };
     {
@@ -156,7 +183,7 @@ actor {
   };
 
   public query ({ caller }) func getLegacyScalingDiagnostics() : async MigrationState {
-    if (not AccessControl.isAdmin(accessControlState, caller)) {
+    if (not AccessControl.isAdmin(accessControlState, caller) and not isStableAdmin(caller)) {
       Runtime.trap("Unauthorized: Only admin can access scaling diagnostics");
     };
     migrationState;
@@ -170,21 +197,21 @@ actor {
 
   // User profile management
   public query ({ caller }) func getCallerUserProfile() : async ?UserProfile {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user)) and not isStableAdmin(caller)) {
       Runtime.trap("Unauthorized: Only users can view profiles");
     };
     userProfiles.get(caller);
   };
 
   public query ({ caller }) func getUserProfile(user : Principal) : async ?UserProfile {
-    if (caller != user and not AccessControl.isAdmin(accessControlState, caller)) {
+    if (caller != user and not AccessControl.isAdmin(accessControlState, caller) and not isStableAdmin(caller)) {
       Runtime.trap("Unauthorized: Can only view your own profile");
     };
     userProfiles.get(user);
   };
 
   public shared ({ caller }) func saveCallerUserProfile(profile : UserProfile) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user)) and not isStableAdmin(caller)) {
       Runtime.trap("Unauthorized: Only users can save profiles");
     };
     userProfiles.add(caller, profile);
@@ -192,7 +219,7 @@ actor {
 
   // Transaction CRUD
   public shared ({ caller }) func addTransaction(amount : Int, description : Text, date : Text, category : Category) : async Nat {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user)) and not isStableAdmin(caller)) {
       Runtime.trap("Unauthorized: Only users can add transactions");
     };
     let id = nextTransactionId;
@@ -210,7 +237,7 @@ actor {
   };
 
   public shared ({ caller }) func editTransaction(id : Nat, amount : Int, description : Text, date : Text, category : Category) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user)) and not isStableAdmin(caller)) {
       Runtime.trap("Unauthorized: Only users can edit transactions");
     };
     switch (transactionsV2.get(id)) {
@@ -218,7 +245,7 @@ actor {
         Runtime.trap("Transaction not found");
       };
       case (?existingTransaction) {
-        if (existingTransaction.owner != caller) {
+        if (existingTransaction.owner != caller and not isStableAdmin(caller)) {
           Runtime.trap("Unauthorized: Can only edit your own transactions");
         };
         let updatedTransaction : Transaction = {
@@ -235,7 +262,7 @@ actor {
   };
 
   public shared ({ caller }) func deleteTransaction(id : Nat) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user)) and not isStableAdmin(caller)) {
       Runtime.trap("Unauthorized: Only users can delete transactions");
     };
     switch (transactionsV2.get(id)) {
@@ -243,7 +270,7 @@ actor {
         Runtime.trap("Transaction not found");
       };
       case (?existingTransaction) {
-        if (existingTransaction.owner != caller) {
+        if (existingTransaction.owner != caller and not isStableAdmin(caller)) {
           Runtime.trap("Unauthorized: Can only delete your own transactions");
         };
         transactionsV2.remove(id);
@@ -252,7 +279,7 @@ actor {
   };
 
   public query ({ caller }) func getAllTransactions() : async [Transaction] {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user)) and not isStableAdmin(caller)) {
       Runtime.trap("Unauthorized: Only users can view transactions");
     };
     transactionsV2.values().toArray().filter(
@@ -263,7 +290,7 @@ actor {
   };
 
   public query ({ caller }) func getTransactionsByCategory(category : Category) : async [Transaction] {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user)) and not isStableAdmin(caller)) {
       Runtime.trap("Unauthorized: Only users can view transactions");
     };
     transactionsV2.values().toArray().filter(
@@ -275,7 +302,7 @@ actor {
 
   // Statistics
   public query ({ caller }) func getCurrentMonthStats() : async MonthlyStats {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user)) and not isStableAdmin(caller)) {
       Runtime.trap("Unauthorized: Only users can view statistics");
     };
 
@@ -466,6 +493,7 @@ actor {
       case (null) { null };
     };
   };
+
   // Migrate CategoryV1 to Category (adds #cash2 support)
   func migrateCategoryV1(c : CategoryV1) : Category {
     switch (c) {
@@ -481,7 +509,11 @@ actor {
   };
 
   // Run once after upgrade: copy old transactions into transactionsV2 with new Category type
+  // Also re-seed admin principals from stable list (accessControlState is NOT stable)
   system func postupgrade() {
+    // Always re-seed admins from stable list on every upgrade
+    seedAdminsFromStable();
+
     if (not cash2MigrationDone) {
       for ((id, txn) in transactions.entries()) {
         let newTxn : Transaction = {
@@ -497,6 +529,5 @@ actor {
       cash2MigrationDone := true;
     };
   };
-
 
 };
